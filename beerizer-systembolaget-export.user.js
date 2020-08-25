@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beerizer Systembolaget export
 // @namespace    https://github.com/Row/beerizer-export-systembolaget
-// @version      0.1
+// @version      0.2
 // @description  Adds an Systembolaget export button to top of the Beerizer.com cart.
 //               The result of the export can be verifed in the Systembolaget.se cart.
 // @author       Row
@@ -23,7 +23,7 @@ const INITIAL_STATE = {
   beers: [],
 };
 
-const makeTag = tag => el => el.appendChild(document.createElement(tag));
+const makeTag = tag => parent => parent.appendChild(document.createElement(tag));
 
 const tr = makeTag('tr');
 const td = makeTag('td');
@@ -61,19 +61,20 @@ const renderProgress = (state) => {
   const bar = div(overlay);
   bar.style.cssText = `
     margin: 20em;
-    background: grey;
+    background: lightgrey;
   `;
   const progress = div(bar);
   progress.style.cssText = `
     width: ${percent}%;
-    background: green;
-    color: #FFF;
+    background: #fbd533;
+    color: #fff;
     padding: 1em;
     text-align: right;
-    overflow: hidden;
+    overflow: visible;
     white-space: nowrap;
+    text-shadow: rgb(95 92 92) 1px 1px 2px;
   `;
-  progress.innerText = `BEER ${done} / ${total}`;
+  progress.innerText = `EXPORTING BEER ${done} OF ${total}`;
 };
 
 const renderResult = (state) => {
