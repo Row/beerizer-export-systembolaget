@@ -1,14 +1,15 @@
 // ==UserScript==
 // @name         Beerizer Systembolaget export
 // @namespace    https://github.com/Row/beerizer-export-systembolaget
-// @version      0.2
-// @description  Adds an Systembolaget export button to top of the Beerizer.com cart.
-//               The result of the export can be verifed in the Systembolaget.se cart.
+// @version      0.3
+// @description  Adds an Systembolaget export button to the top of the Beerizer.com cart.
+//               The export result can be verifed in the Systembolaget.se cart.
 // @author       Row
 // @match        https://beerizer.com/*
 // @match        https://www.systembolaget.se/*
 // @grant        GM.setValue
 // @grant        GM.getValue
+// @run-at       document-body
 // ==/UserScript==
 
 const STATE_KEY     = 'STATE_KEY';
@@ -126,7 +127,6 @@ const initSystemBolaget = async (state) => {
   if (state.beers.length === 0) {
     await doneSystemBolaget(state);
   } else {
-    renderProgress(state);
     await GM.setValue(STATE_KEY, { ...state, state: STATE_PENDING });
     window.location.href = state.beers[0].href;
   }
@@ -159,10 +159,15 @@ const addBeerSystembolaget = async (state) => {
 
 const handleSystembolaget = async () => {
   const state = await GM.getValue(STATE_KEY, INITIAL_STATE);
+  if (state.beers.length > 0 && state.state !== STATE_DONE) {
+    renderProgress(state);
+  }
   if (state.state === STATE_INIT) {
     await initSystemBolaget(state);
   } else if (state.state === STATE_PENDING) {
-    await addBeerSystembolaget(state);
+    window.addEventListener('load', () => {
+      addBeerSystembolaget(state);
+    });
   }
   if (window.location.pathname === '/varukorg') {
     renderResult(state);
@@ -195,6 +200,7 @@ const exportCart = async () => {
 
 const renderButton = () => {
   const cl = document.querySelector('.cart-link');
+  if (!cl) return;
   const e = cl.cloneNode(2);
   cl.after(e);
   e.querySelector('span').innerText = 'Export Systembolaget';
@@ -214,7 +220,9 @@ const handleBeerizer = () => {
   'use strict';
   const hostname = window.location.hostname;
   if (hostname.includes('beerizer')) {
-    handleBeerizer();
+    window.addEventListener('load', () => {
+      handleBeerizer();
+    });
   }
   if (hostname.includes('systembolaget')) {
     handleSystembolaget();
