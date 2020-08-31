@@ -4,6 +4,10 @@
 Adds an Systembolaget export button to top of the Beerizer.com cart.
 The result of the export can be verifed in the Systembolaget.se cart.
 
+![Export button](doc/export-button.png)
+![Progress of the export](doc/progress.png)
+![Export result](doc/export-result.png)
+
 ## Installation
 1. Install a userscript manager, e.g. [Tampermonkey](https://www.tampermonkey.net/).
 1. Open the raw user.js file here: 
