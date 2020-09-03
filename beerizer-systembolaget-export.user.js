@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beerizer Systembolaget export
 // @namespace    https://github.com/Row/beerizer-export-systembolaget
-// @version      0.3
+// @version      0.4
 // @description  Adds an Systembolaget export button to the top of the Beerizer.com cart.
 //               The export result can be verifed in the Systembolaget.se cart.
 // @author       Row
@@ -133,7 +133,6 @@ const initSystemBolaget = async (state) => {
 };
 
 const addBeerSystembolaget = async (state) => {
-  renderProgress(state);
   const addToCartXpath = '//span[contains(text(),"Lägg i varukorgen")]';
   const { index, beers } = state;
   const beer = state.beers[index];
