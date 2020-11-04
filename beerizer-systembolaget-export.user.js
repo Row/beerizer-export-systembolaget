@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beerizer Systembolaget export
 // @namespace    https://github.com/Row/beerizer-export-systembolaget
-// @version      0.4
+// @version      0.5
 // @description  Adds an Systembolaget export button to the top of the Beerizer.com cart.
 //               The export result can be verifed in the Systembolaget.se cart.
 // @author       Row
@@ -23,6 +23,8 @@ const INITIAL_STATE = {
   index: 0,
   beers: [],
 };
+
+const PROGRESS_ID = 'beerizer-progress';
 
 const makeTag = tag => parent => parent.appendChild(document.createElement(tag));
 
@@ -47,13 +49,18 @@ const tdr = parent =>  {
 
 const renderProgress = (state) => {
   const overlay = div(document.body);
+  overlay.id = PROGRESS_ID;
   overlay.style.cssText = `
-    top: 0;
+    align-items: center;
+    background: #FFF;
+    display: flex;
+    height: 100vh;
+    justify-content: center;
     left: 0;
     position: fixed;
-    height: 100vh;
+    top: 0;
+    transition: height 0.3s;
     width: 100vw;
-    background: #FFF;
     z-index: 1337;
   `;
   const done = state.beers.filter(({ state }) => state !== STATE_INIT).length;
@@ -61,37 +68,37 @@ const renderProgress = (state) => {
   const percent = (done / total) * 100;
   const bar = div(overlay);
   bar.style.cssText = `
-    margin: 20em;
+    margin: 0 20em;
     background: lightgrey;
   `;
   const progress = div(bar);
   progress.style.cssText = `
-    width: ${percent}%;
     background: #fbd533;
     color: #fff;
+    overflow: visible;
     padding: 1em;
     text-align: right;
-    overflow: visible;
-    white-space: nowrap;
     text-shadow: rgb(95 92 92) 1px 1px 2px;
+    white-space: nowrap;
+    width: ${percent}%;
   `;
   progress.innerText = `EXPORTING BEER ${done} OF ${total}`;
 };
 
-const renderResult = (state) => {
+const renderResult = async (state) => {
   const div = document.createElement('div');
   div.className = 'total';
-  const insertPoint = document.querySelector('.page-heading>h1');
-  insertPoint.parentNode.after(div);
-  div.innerHTML = `<h2>Beerizer export ${state.beers.length} beers</h2>`;
+  const insertPoint = await waitForElement('//h1[./span[text()="Varukorg"]]');
+  insertPoint.after(div);
+  div.innerHTML = `<h2>Beerizer exported ${state.beers.length} beers</h2>`;
   const exportTable = table(div);
   state.beers.map(({
+    beerizerHref,
+    beerizerTitle,
     error,
     state,
     systemBolagetHref,
     systemBolagetTitle,
-    beerizerHref,
-    beerizerTitle,
   }, index) => {
     const row = tr(exportTable);
     tdr(row).innerText = index + 1;
@@ -118,6 +125,24 @@ const getElementByXpath = (xpath) =>
     null,
   ).singleNodeValue;
 
+const waitForElement = (xpath, timeout = 5000, interval = 100) => {
+  const start = (new Date()).getTime();
+  return new Promise((resolve, reject) => {
+    const tryElement = () => {
+      const element = getElementByXpath(xpath);
+      if (element) {
+        resolve(element);
+        return;
+      }
+      if (((new Date()).getTime() - start) > timeout) {
+        reject(xpath);
+      }
+      window.setTimeout(tryElement, interval);
+    };
+    tryElement();
+  });
+};
+
 const doneSystemBolaget = async (state) => {
   GM.setValue(STATE_KEY, { ...state, state: STATE_DONE });
   window.location.href = 'https://www.systembolaget.se/varukorg';
@@ -127,21 +152,44 @@ const initSystemBolaget = async (state) => {
   if (state.beers.length === 0) {
     await doneSystemBolaget(state);
   } else {
+    try {
+      const CONFIRM_AGE = '//button["Jag har fyllt 20 år"]';
+      const btn = await waitForElement(CONFIRM_AGE, 2000);
+      btn.click();
+    } catch (e) {
+      console.log('tried to accept age');
+    }
+    try {
+      const CONFIRM_COOKIE = '//button[text()="SPARA & STÄNG"]';
+      const btn = await waitForElement(CONFIRM_COOKIE, 2000);
+      btn.click();
+    } catch (e) {
+      console.log('tried to accept cookie');
+    }
     await GM.setValue(STATE_KEY, { ...state, state: STATE_PENDING });
     window.location.href = state.beers[0].href;
   }
 };
 
 const addBeerSystembolaget = async (state) => {
-  const addToCartXpath = '//span[contains(text(),"Lägg i varukorgen")]';
+  const addToCartXpath = '//button[./div[text()="Lägg i varukorg"]]';
+  const verifyXpath = '//button[./div[text()="Tillagd"]]';
   const { index, beers } = state;
   const beer = state.beers[index];
   beer.systemBolagetHref = window.location.href;
+  beer.systemBolagetTitle = getElementByXpath('//h1[./span]').innerText;
   try {
-    beer.systemBolagetTitle = document.querySelector('.product-header .name').innerText;
-    const cartBtn = getElementByXpath(addToCartXpath);
+    const cartBtn = await waitForElement(addToCartXpath);
     cartBtn.click();
-    // TODO post condition?
+    try {
+      await waitForElement(verifyXpath, 2000, 100);
+    } catch (e) {
+      if (!getElementByXpath('//div[text()="Välj leveranssätt "]')) throw e;
+      const progress = document.getElementById(PROGRESS_ID);
+      progress.style.height = '75px';
+      await waitForElement(verifyXpath, 12000, 100);
+      progress.style.height = '100vh';
+    }
     beer.state = STATE_DONE;
   } catch (error) {
     beer.state = STATE_ERROR;
@@ -168,7 +216,7 @@ const handleSystembolaget = async () => {
       addBeerSystembolaget(state);
     });
   }
-  if (window.location.pathname === '/varukorg') {
+  if (window.location.pathname === '/varukorg/') {
     renderResult(state);
   }
 };
@@ -198,7 +246,7 @@ const exportCart = async () => {
 };
 
 const renderButton = () => {
-  const cl = document.querySelector('.cart-link');
+  const cl = getElementByXpath('//a[@class="cart-link" and ./span[text()="Share"]]');
   if (!cl) return;
   const e = cl.cloneNode(2);
   cl.after(e);
