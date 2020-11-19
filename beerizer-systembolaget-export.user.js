@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beerizer Systembolaget export
 // @namespace    https://github.com/Row/beerizer-export-systembolaget
-// @version      0.5
+// @version      0.6
 // @description  Adds an Systembolaget export button to the top of the Beerizer.com cart.
 //               The export result can be verifed in the Systembolaget.se cart.
 // @author       Row
@@ -18,6 +18,7 @@ const STATE_INIT    = 'INIT';
 const STATE_PENDING = 'PENDING';
 const STATE_DONE    = 'DONE';
 const STATE_ERROR   = 'ERROR';
+const STATE_CANCEL  = 'CANCEL';
 const INITIAL_STATE = {
   state: STATE_UNDEF,
   index: 0,
@@ -28,23 +29,36 @@ const PROGRESS_ID = 'beerizer-progress';
 
 const makeTag = tag => parent => parent.appendChild(document.createElement(tag));
 
-const tr = makeTag('tr');
-const td = makeTag('td');
-const div = makeTag('div');
 const a = makeTag('a');
+const button = makeTag('button');
+const div = makeTag('div');
 const table = makeTag('table');
-
+const td = makeTag('td');
+const tr = makeTag('tr');
 const aLink = (parent, { href, title }) => {
-  const el = a(parent);
-  el.setAttribute('href', href);
-  el.innerText = title;
+  let el;
+  if (href) {
+    el = a(parent);
+    el.setAttribute('href', href);
+  } else {
+    el = parent;
+  }
+  el.innerText = title || 'Unknown';
   return el;
 };
-
 const tdr = parent =>  {
   const t = td(parent);
   t.style.padding = '0.3em';
   return t;
+};
+
+const cancelExport = async (state) => {
+  const { index, beers } = state;
+  for (let i = index; i < beers.length; i += 1) {
+    beers[i].state = STATE_CANCEL;
+    beers[i].error = 'cancelled';
+  }
+  doneSystemBolaget({ ...state, index: beers.length - 1 });
 };
 
 const renderProgress = (state) => {
@@ -54,6 +68,7 @@ const renderProgress = (state) => {
     align-items: center;
     background: #FFF;
     display: flex;
+    flex-flow: column;
     height: 100vh;
     justify-content: center;
     left: 0;
@@ -83,6 +98,17 @@ const renderProgress = (state) => {
     width: ${percent}%;
   `;
   progress.innerText = `EXPORTING BEER ${done} OF ${total}`;
+  const cancelButton = button(overlay);
+  cancelButton.innerText = 'Cancel export';
+  cancelButton.style.cssText = `
+    background: white;
+    border: 1px solid red;
+    color: red;
+    cursor: pointer;
+    font-size: 0.7rem;
+    margin-top: 1rem;
+  `;
+  cancelButton.addEventListener('click', () => cancelExport(state));
 };
 
 const renderResult = async (state) => {
@@ -104,15 +130,15 @@ const renderResult = async (state) => {
     tdr(row).innerText = index + 1;
     aLink(tdr(row), {
       href: beerizerHref,
-      title: `Beerizer: ${beerizerTitle}`,
+      title: beerizerTitle,
     });
     tdr(row).innerText = '➜';
     aLink(tdr(row), {
       href: systemBolagetHref,
-      title: `Systembolaget: ${systemBolagetTitle}`,
+      title: systemBolagetTitle,
     });
     tdr(row).innerText = state === STATE_DONE ? '✅' : '⚠️';
-    tdr(row).innerText = error ? error : 'Success';
+    tdr(row).innerText = error ? error : state;
   });
 };
 
@@ -153,7 +179,7 @@ const initSystemBolaget = async (state) => {
     await doneSystemBolaget(state);
   } else {
     try {
-      const CONFIRM_AGE = '//button["Jag har fyllt 20 år"]';
+      const CONFIRM_AGE = '//button[text()="Jag har fyllt 20 år"]';
       const btn = await waitForElement(CONFIRM_AGE, 2000);
       btn.click();
     } catch (e) {
@@ -263,7 +289,7 @@ const handleBeerizer = () => {
 };
 
 // initialize
-(function() {
+(() => {
   'use strict';
   const hostname = window.location.hostname;
   if (hostname.includes('beerizer')) {
