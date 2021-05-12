@@ -221,7 +221,7 @@ const addBeerSystembolaget = async (state) => {
     } catch (e) {
       if (!getElementByXpath('//div[text()="Välj leveranssätt "]')) throw e;
       const progress = document.getElementById(PROGRESS_ID);
-      progress.style.height = '75px';
+      progress.style.height = '80px';
       await waitForElement(verifyXpath, 1000 * 120, 100);
       progress.style.height = '100vh';
     }
