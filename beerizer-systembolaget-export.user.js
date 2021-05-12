@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beerizer Systembolaget export
 // @namespace    https://github.com/Row/beerizer-export-systembolaget
-// @version      0.6
+// @version      0.7
 // @description  Adds an Systembolaget export button to the top of the Beerizer.com cart.
 //               The export result can be verifed in the Systembolaget.se cart.
 // @author       Row
