@@ -156,12 +156,12 @@ const getElementByXpath = (xpath) =>
     null,
   ).singleNodeValue;
 
-const waitForElement = (xpath, timeout = 5000, interval = 100) => {
+const waitForElement = (xpath, timeout = 5000, interval = 100, shouldInverse = false) => {
   const start = (new Date()).getTime();
   return new Promise((resolve, reject) => {
     const tryElement = () => {
       const element = getElementByXpath(xpath);
-      if (element) {
+      if ((!!element) !== shouldInverse) {
         resolve(element);
         return;
       }
@@ -221,7 +221,11 @@ const addBeerSystembolaget = async (state) => {
     } catch (e) {
       if (!getElementByXpath('//div[text()="Välj leveranssätt "]')) throw e;
       const progress = document.getElementById(PROGRESS_ID);
-      progress.style.height = '80px';
+      progress.style.height = '100px';
+      const closeModalButton = '//button[@id="initialTgmFocus"]';
+      await waitForElement(closeModalButton, 1000 * 120, 100, true);
+      const cartBtn = await waitForElement(addToCartXpath);
+      cartBtn.click();
       await waitForElement(verifyXpath, 1000 * 120, 100);
       progress.style.height = '100vh';
     }
