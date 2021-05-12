@@ -191,7 +191,7 @@ const initSystemBolaget = async (state) => {
       console.log('tried to accept age');
     }
     try {
-      const CONFIRM_COOKIE = '//button[text()="SPARA & STÄNG"]';
+      const CONFIRM_COOKIE = '//button[text()="Slå på och acceptera alla kakor"]';
       const btn = await waitForElement(CONFIRM_COOKIE, 2000);
       btn.click();
     } catch (e) {
