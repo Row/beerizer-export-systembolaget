@@ -113,8 +113,13 @@ const renderProgress = (state) => {
 
 const renderResult = async (state) => {
   const div = document.createElement('div');
-  div.className = 'total';
-  const insertPoint = await waitForElement('//h1[./span[text()="Varukorg"]]');
+  const basket = `
+    //div[
+          text()="Varukorgen är tom."
+          or (starts-with(text(), "Du har ") and contains(text(), "varor i korgen"))
+    ]`;
+  await waitForElement(basket);
+  const insertPoint = await waitForElement('//h1[./span[text()="Varukorg"] or text()="Varukorg"]');
   insertPoint.after(div);
   div.innerHTML = `<h2>Beerizer exported ${state.beers.length} beers</h2>`;
   const exportTable = table(div);
