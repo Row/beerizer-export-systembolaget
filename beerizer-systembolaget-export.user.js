@@ -208,8 +208,12 @@ const addBeerSystembolaget = async (state) => {
   const { index, beers } = state;
   const beer = state.beers[index];
   beer.systemBolagetHref = window.location.href;
-  beer.systemBolagetTitle = getElementByXpath('//h1[./span]').innerText;
   try {
+    const beerHeader = getElementByXpath('//h1[./span]');
+    if (!beerHeader) {
+      throw Error('Beer not found?');
+    }
+    beer.systemBolagetTitle = beerHeader.innerText;
     const cartBtn = await waitForElement(addToCartXpath);
     cartBtn.click();
     try {
