@@ -46,11 +46,54 @@ const aLink = (parent, { href, title }) => {
   el.innerText = title || 'Unknown';
   return el;
 };
-const tdr = parent =>  {
+const tdr = parent => {
   const t = td(parent);
   t.style.padding = '0.3em';
   return t;
 };
+
+const getElementByXpath = (xpath) =>
+  document.evaluate(
+    xpath,
+    document,
+    null,
+    XPathResult.FIRST_ORDERED_NODE_TYPE,
+    null,
+  ).singleNodeValue;
+
+const waitForElement = (xpath, timeout = 5000, interval = 100, shouldInverse = false) => {
+  const start = (new Date()).getTime();
+  return new Promise((resolve, reject) => {
+    const tryElement = () => {
+      const element = getElementByXpath(xpath);
+      if ((!!element) !== shouldInverse) {
+        resolve(element);
+        return;
+      }
+      if (((new Date()).getTime() - start) > timeout) {
+        reject(xpath);
+      }
+      window.setTimeout(tryElement, interval);
+    };
+    tryElement();
+  });
+};
+
+// Systembolaget related
+const URL_START = 'https://www.systembolaget.se';
+const URL_CART = 'https://www.systembolaget.se/varukorg';
+
+const XPATH_CART_INS = '//h1[./span[text()="Varukorg"] or text()="Varukorg"]';
+const XPATH_CART = `//div[
+                    text()="Varukorgen är tom."
+                    or (starts-with(text(), "Du har ") and contains(text(), "varor i korgen"))]`;
+const XPATH_CONFIRM_AGE = '//button[text()="Jag har fyllt 20 år"]';
+const XPATH_CONFIRM_COOKIE = '//button[text()="Slå på och acceptera alla kakor"]';
+const XPATH_ADD_TO_CART_BTN = '//button[./div[text()="Lägg i varukorg"]]';
+const XPATH_VERIFY_ADD = '//button[./div[text()="Tillagd"]]';
+const XPATH_MODAL = '//button[@id="initialTgmFocus"]';
+const XPATH_BEER_TITLE = '//h1[./span]';
+const XPATH_SHIP_METHOD = '//div[text()="Välj leveranssätt "]';
 
 const cancelExport = async (state) => {
   const { index, beers } = state;
@@ -113,14 +156,9 @@ const renderProgress = (state) => {
 
 const renderResult = async (state) => {
   const div = document.createElement('div');
-  const basket = `
-    //div[
-          text()="Varukorgen är tom."
-          or (starts-with(text(), "Du har ") and contains(text(), "varor i korgen"))
-    ]`;
-  await waitForElement(basket);
-  const insertPoint = await waitForElement('//h1[./span[text()="Varukorg"] or text()="Varukorg"]');
-  insertPoint.after(div);
+  await waitForElement(XPATH_CART);
+  const insertElement = await waitForElement(XPATH_CART_INS);
+  insertElement.after(div);
   div.innerHTML = `<h2>Beerizer exported ${state.beers.length} beers</h2>`;
   const exportTable = table(div);
   state.beers.map(({
@@ -147,36 +185,9 @@ const renderResult = async (state) => {
   });
 };
 
-const getElementByXpath = (xpath) =>
-  document.evaluate(
-    xpath,
-    document,
-    null,
-    XPathResult.FIRST_ORDERED_NODE_TYPE,
-    null,
-  ).singleNodeValue;
-
-const waitForElement = (xpath, timeout = 5000, interval = 100, shouldInverse = false) => {
-  const start = (new Date()).getTime();
-  return new Promise((resolve, reject) => {
-    const tryElement = () => {
-      const element = getElementByXpath(xpath);
-      if ((!!element) !== shouldInverse) {
-        resolve(element);
-        return;
-      }
-      if (((new Date()).getTime() - start) > timeout) {
-        reject(xpath);
-      }
-      window.setTimeout(tryElement, interval);
-    };
-    tryElement();
-  });
-};
-
 const doneSystemBolaget = async (state) => {
   GM.setValue(STATE_KEY, { ...state, state: STATE_DONE });
-  window.location.href = 'https://www.systembolaget.se/varukorg';
+  window.location.href = URL_CART;
 };
 
 const initSystemBolaget = async (state) => {
@@ -184,15 +195,13 @@ const initSystemBolaget = async (state) => {
     await doneSystemBolaget(state);
   } else {
     try {
-      const CONFIRM_AGE = '//button[text()="Jag har fyllt 20 år"]';
-      const btn = await waitForElement(CONFIRM_AGE, 2000);
+      const btn = await waitForElement(XPATH_CONFIRM_AGE, 2000);
       btn.click();
     } catch (e) {
       console.log('tried to accept age');
     }
     try {
-      const CONFIRM_COOKIE = '//button[text()="Slå på och acceptera alla kakor"]';
-      const btn = await waitForElement(CONFIRM_COOKIE, 2000);
+      const btn = await waitForElement(XPATH_CONFIRM_COOKIE, 2000);
       btn.click();
     } catch (e) {
       console.log('tried to accept cookie');
@@ -203,30 +212,27 @@ const initSystemBolaget = async (state) => {
 };
 
 const addBeerSystembolaget = async (state) => {
-  const addToCartXpath = '//button[./div[text()="Lägg i varukorg"]]';
-  const verifyXpath = '//button[./div[text()="Tillagd"]]';
   const { index, beers } = state;
   const beer = state.beers[index];
   beer.systemBolagetHref = window.location.href;
   try {
-    const beerHeader = getElementByXpath('//h1[./span]');
+    const beerHeader = getElementByXpath(XPATH_BEER_TITLE);
     if (!beerHeader) {
       throw Error('Beer not found?');
     }
     beer.systemBolagetTitle = beerHeader.innerText;
-    const cartBtn = await waitForElement(addToCartXpath);
+    const cartBtn = await waitForElement(XPATH_ADD_TO_CART_BTN);
     cartBtn.click();
     try {
-      await waitForElement(verifyXpath, 2000, 100);
+      await waitForElement(XPATH_VERIFY_ADD, 2000, 100);
     } catch (e) {
-      if (!getElementByXpath('//div[text()="Välj leveranssätt "]')) throw e;
+      if (!getElementByXpath(XPATH_SHIP_METHOD)) throw e;
       const progress = document.getElementById(PROGRESS_ID);
       progress.style.height = '100px';
-      const closeModalButton = '//button[@id="initialTgmFocus"]';
-      await waitForElement(closeModalButton, 1000 * 120, 100, true);
-      const cartBtn = await waitForElement(addToCartXpath);
+      await waitForElement(XPATH_MODAL, 1000 * 120, 100, true);
+      const cartBtn = await waitForElement(XPATH_ADD_TO_CART_BTN);
       cartBtn.click();
-      await waitForElement(verifyXpath, 1000 * 120, 100);
+      await waitForElement(XPATH_VERIFY_ADD, 2000, 100);
       progress.style.height = '100vh';
     }
     beer.state = STATE_DONE;
@@ -260,15 +266,19 @@ const handleSystembolaget = async () => {
   }
 };
 
+
 // Beerizer parts
+const XPATH_CART_MENU_BUTTON = '//a[@class="cart-link" and ./span[text()="Share"]]';
+const SELECT_OPEN_CART_BUTTON = 'div.cart-wrapper.collapsed>div.summary';
+const SELECT_SB_REF_LINKS = 'a[title="To Systembolaget"]';
+const SELECT_TITLE = '.CartProductTable td.name>a';
+
 const exportCart = async () => {
-  const links = 'a[title="To Systembolaget"]';
-  const titleLinks = '.CartProductTable td.name>a';
-  const titles = [...document.querySelectorAll(titleLinks)].map(l => ({
+  const titles = [...document.querySelectorAll(SELECT_TITLE)].map(l => ({
     beerizerHref: l.href,
     beerizerTitle: l.innerText,
   }));
-  const hrefs = [...document.querySelectorAll(links)].map(l => l.href);
+  const hrefs = [...document.querySelectorAll(SELECT_SB_REF_LINKS)].map(l => l.href);
   const beers = [...new Set(hrefs)].map((href, i) => ({
     ...titles[i],
     href,
@@ -281,11 +291,11 @@ const exportCart = async () => {
   };
   await GM.setValue(STATE_KEY, state);
   const w = window.open('', 'systembolaget');
-  w.location = 'https://www.systembolaget.se';
+  w.location = URL_START;
 };
 
 const renderButton = () => {
-  const cl = getElementByXpath('//a[@class="cart-link" and ./span[text()="Share"]]');
+  const cl = getElementByXpath(XPATH_CART_MENU_BUTTON);
   if (!cl) return;
   const e = cl.cloneNode(2);
   cl.after(e);
@@ -294,8 +304,7 @@ const renderButton = () => {
 };
 
 const handleBeerizer = () => {
-  const btn = 'div.cart-wrapper.collapsed>div.summary';
-  const btnEl = document.querySelector(btn);
+  const btnEl = document.querySelector(SELECT_OPEN_CART_BUTTON);
   btnEl.addEventListener('click', () => {
     window.setTimeout(renderButton, 100);
   });
