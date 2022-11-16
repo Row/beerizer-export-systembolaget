@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beerizer Systembolaget export
 // @namespace    https://github.com/Row/beerizer-export-systembolaget
-// @version      0.7
+// @version      0.8
 // @description  Adds an Systembolaget export button to the top of the Beerizer.com cart.
 //               The export result can be verifed in the Systembolaget.se cart.
 // @author       Row
@@ -89,10 +89,10 @@ const XPATH_CART = `//div[
                     or (starts-with(text(), "Du har ") and contains(text(), "varor i korgen"))]`;
 const XPATH_CONFIRM_AGE = '//button[text()="Jag har fyllt 20 år"]';
 const XPATH_CONFIRM_COOKIE = '//button[text()="Slå på och acceptera alla kakor"]';
-const XPATH_ADD_TO_CART_BTN = '//button[./div[text()="Lägg i varukorg"]]';
-const XPATH_VERIFY_ADD = '//button[./div[text()="Tillagd"]]';
+const XPATH_ADD_TO_CART_BTN = '//button[text()="Lägg i varukorg"]';
+const XPATH_VERIFY_ADD = '//button[text()="Tillagd"]';
 const XPATH_MODAL = '//button[@id="initialTgmFocus"]';
-const XPATH_BEER_TITLE = '//h1[./span]';
+const XPATH_BEER_TITLE = '//h1[./p]';
 const XPATH_SHIP_METHOD = '//div[text()="Välj leveranssätt "]';
 
 const cancelExport = async (state) => {
@@ -216,7 +216,7 @@ const addBeerSystembolaget = async (state) => {
   const beer = state.beers[index];
   beer.systemBolagetHref = window.location.href;
   try {
-    const beerHeader = getElementByXpath(XPATH_BEER_TITLE);
+    const beerHeader = await waitForElement(XPATH_BEER_TITLE);
     if (!beerHeader) {
       throw Error('Beer not found?');
     }
