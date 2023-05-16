@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beerizer Systembolaget export
 // @namespace    https://github.com/Row/beerizer-export-systembolaget
-// @version      0.8
+// @version      0.9
 // @description  Adds an Systembolaget export button to the top of the Beerizer.com cart.
 //               The export result can be verifed in the Systembolaget.se cart.
 // @author       Row
@@ -84,16 +84,14 @@ const URL_START = 'https://www.systembolaget.se';
 const URL_CART = 'https://www.systembolaget.se/varukorg';
 
 const XPATH_CART_INS = '//h1[./span[text()="Varukorg"] or text()="Varukorg"]';
-const XPATH_CART = `//div[
-                    text()="Varukorgen är tom."
-                    or (starts-with(text(), "Du har ") and contains(text(), "varor i korgen"))]`;
+const XPATH_CART = '//div[./h1[text()="Varukorg"]]';
 const XPATH_CONFIRM_AGE = '//button[text()="Jag har fyllt 20 år"]';
 const XPATH_CONFIRM_COOKIE = '//button[text()="Slå på och acceptera alla kakor"]';
 const XPATH_ADD_TO_CART_BTN = '//button[text()="Lägg i varukorg"]';
 const XPATH_VERIFY_ADD = '//button[text()="Tillagd"]';
-const XPATH_MODAL = '//button[@id="initialTgmFocus"]';
+const XPATH_MODAL = '//div[@id="modalId"]';
 const XPATH_BEER_TITLE = '//h1[./p]';
-const XPATH_SHIP_METHOD = '//div[text()="Välj leveranssätt "]';
+const XPATH_SHIP_METHOD = '//p[text()="Välj leveranssätt "]';
 
 const cancelExport = async (state) => {
   const { index, beers } = state;
@@ -109,7 +107,7 @@ const renderProgress = (state) => {
   overlay.id = PROGRESS_ID;
   overlay.style.cssText = `
     align-items: center;
-    background: #FFF;
+    background: rgba(255, 255, 255, 0.3);
     display: flex;
     flex-flow: column;
     height: 100vh;
