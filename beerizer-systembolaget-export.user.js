@@ -91,7 +91,7 @@ const XPATH_ADD_TO_CART_BTN = '//button[text()="Lägg i varukorg"]';
 const XPATH_VERIFY_ADD = '//p[@color="white"]/button[text()="varukorgen" and @color="white"]';
 const XPATH_BEER_TITLE = '//h1[./p]';
 const XPATH_SHIP_METHOD = '//div[@id="TGMSidebarOptionsPicker"]//p[text()="Handla online"]';
-const XPATH_ERROR_INFO = '//h2[text()="Sidan finns inte"]|//div[//p[text()="Handla online"]]//div[./button[@aria-label="Läs mer"]]/span|//p[@color="rose400"]';
+const XPATH_ERROR_INFO = '//h2[text()="Sidan finns inte"]|//div[./div/p[text()="Handla online"]]//button[text()="Lägg i varukorg"]/../../..//span|//p[@color="rose400"]';
 
 const cancelExport = async (state) => {
   const { index, beers } = state;
