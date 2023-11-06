@@ -88,10 +88,10 @@ const XPATH_CART = '//div[./h1[text()="Varukorg"]]';
 const XPATH_CONFIRM_AGE = '//button[text()="Jag har fyllt 20 år"]';
 const XPATH_CONFIRM_COOKIE = '//button[text()="Slå på och acceptera alla kakor"]';
 const XPATH_ADD_TO_CART_BTN = '//button[text()="Lägg i varukorg"]';
-const XPATH_VERIFY_ADD = '//button[text()="Tillagd"]';
-const XPATH_MODAL = '//div[@id="modalId"]';
+const XPATH_VERIFY_ADD = '//p[@color="white"]/button[text()="varukorgen" and @color="white"]';
 const XPATH_BEER_TITLE = '//h1[./p]';
-const XPATH_SHIP_METHOD = '//p[text()="Välj leveranssätt "]';
+const XPATH_SHIP_METHOD = '//div[@id="TGMSidebarOptionsPicker"]//p[text()="Handla online"]';
+const XPATH_ERROR_INFO = '//h2[text()="Sidan finns inte"]|//div[//p[text()="Handla online"]]//div[./button[@aria-label="Läs mer"]]/span|//p[@color="rose400"]';
 
 const cancelExport = async (state) => {
   const { index, beers } = state;
@@ -227,16 +227,15 @@ const addBeerSystembolaget = async (state) => {
       if (!getElementByXpath(XPATH_SHIP_METHOD)) throw e;
       const progress = document.getElementById(PROGRESS_ID);
       progress.style.height = '100px';
-      await waitForElement(XPATH_MODAL, 1000 * 120, 100, true);
-      const cartBtn = await waitForElement(XPATH_ADD_TO_CART_BTN);
-      cartBtn.click();
+      await waitForElement(XPATH_SHIP_METHOD, 1000 * 120, 100, true);
       await waitForElement(XPATH_VERIFY_ADD, 2000, 100);
       progress.style.height = '100vh';
     }
     beer.state = STATE_DONE;
   } catch (error) {
     beer.state = STATE_ERROR;
-    beer.error = error.message;
+    const message = error?.message || getElementByXpath(XPATH_ERROR_INFO)?.innerText || 'Unknown';
+    beer.error = message;
   }
   const nextIndex = index + 1;
   if (beers.length <= nextIndex) {
