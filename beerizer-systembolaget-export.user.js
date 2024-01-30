@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Beerizer Systembolaget export
 // @namespace    https://github.com/Row/beerizer-export-systembolaget
-// @version      0.9
+// @version      0.10
 // @description  Adds an Systembolaget export button to the top of the Beerizer.com cart.
 //               The export result can be verifed in the Systembolaget.se cart.
 // @author       Row
@@ -90,7 +90,7 @@ const XPATH_CONFIRM_COOKIE = '//button[text()="Slå på och acceptera alla kakor
 const XPATH_ADD_TO_CART_BTN = '//button[text()="Lägg i varukorg"]';
 const XPATH_VERIFY_ADD = '//p[@color="white"]/button[text()="varukorgen" and @color="white"]';
 const XPATH_BEER_TITLE = '//h1[./p]';
-const XPATH_SHIP_METHOD = '//div[@id="TGMSidebarOptionsPicker"]//p[text()="Handla online"]';
+const XPATH_SHIP_METHOD = '//div[starts-with(@id, "TGMSidebar:")]';
 const XPATH_ERROR_INFO = '//h2[text()="Sidan finns inte"]|//div[./div/p[text()="Handla online"]]//button[text()="Lägg i varukorg"]/../../..//span|//p[@color="rose400"]';
 
 const cancelExport = async (state) => {
